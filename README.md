@@ -1,20 +1,22 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# 🚄 RailGuard AI: Autonomous Central Rail Infrastructure Orchestration Layer
 
-# Run and deploy your AI Studio app
+RailGuard AI is an enterprise-grade central infrastructure orchestration layer designed to transform railway management. By shifting critical safety and logistics away from high-cost, high-maintenance physical track infrastructure, this platform relies entirely on intelligent software pipelines, edge-processed crowdsourced telemetry, and concurrent LLM context loops to keep networks safer, smarter, and more efficient.
 
-This contains everything you need to run your app locally.
+---
 
-View your app in AI Studio: https://ai.studio/apps/59ebf67a-2012-4fba-a8a5-9c6ffd7721e8
+## 📅 Hackathon Context & Problem Statement
 
-## Run Locally
+Developed explicitly for **FAR AWAY 2026 (India's Biggest International Hackathon)** under the **Railways** theme, this project resolves the reactive nature of modern rail infrastructure[cite: 4]. 
 
-**Prerequisites:**  Node.js
+### The Modern Railway Crisis
+*   **Reactive Silos:** Asset faults, track anomalies, and structural integrity risks go completely undetected until they cross a critical, catastrophic threshold[cite: 4].
+*   **Operational Cascades:** Train controllers lack unified visibility; a small signal fault in a single sector cascades into severe network-wide corridor delays with no automated mitigation pathways[cite: 4].
+*   **Massive Infrastructure Costs:** Traditional tracking systems require billions in capital to deploy static trackside sensors, making rapid scalability unfeasible.
+
+---
+
+## 🚀 The Core Innovation: A Software-First Pivot
+
+To thrive in the complex physical environment of India—characterized by dense passenger volumes, monsoonal disruptions, and overhead line challenges—RailGuard AI shifts the data dependency entirely from **hardware to software**.
 
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
