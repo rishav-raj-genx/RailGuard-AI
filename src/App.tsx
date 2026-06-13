@@ -3,6 +3,7 @@ import LandingPage from './components/LandingPage';
 import ControlCenter from './components/ControlCenter';
 import PassengerApp from './components/PassengerApp';
 import StaffRoom from './components/StaffRoom';
+import SandboxFeeder from './components/SandboxFeeder';
 import { Train, PriorityAlert } from './types';
 import { INITIAL_TRAINS, INITIAL_ALERTS, INITIAL_CHAT } from './data';
 
@@ -139,6 +140,31 @@ export default function App() {
     }
   };
 
+  const handleUpdateTrain = async (trainId: string, updatedFields: Partial<Train>) => {
+    try {
+      const res = await fetch(`/api/trains/${trainId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedFields)
+      });
+      if (res.ok) {
+        fetchTrains();
+      }
+    } catch (err) {
+      setTrains(prev => prev.map(t => {
+        if (t.id === trainId) {
+          const newTrain = { ...t, ...updatedFields };
+          if (updatedFields.crowdPercent !== undefined) {
+            newTrain.crowdLevel = updatedFields.crowdPercent > 70 ? "High" : updatedFields.crowdPercent > 35 ? "Medium" : "Low";
+            newTrain.carCrowds = Array.from({ length: 8 }, () => Math.floor(Math.random() * (updatedFields.crowdPercent || 50)));
+          }
+          return newTrain;
+        }
+        return t;
+      }));
+    }
+  };
+
   // Poll state parameters every 5 seconds to animate train positions
   useEffect(() => {
     fetchTrains();
@@ -169,6 +195,7 @@ export default function App() {
           onEmergencyHalt={handleEmergencyHalt}
           onEmergencyHaltAll={handleEmergencyHaltAll}
           onDismissAlert={handleDismissAlert}
+          onUpdateTrain={handleUpdateTrain}
         />
       )}
 
@@ -187,6 +214,16 @@ export default function App() {
           onReroute={handleReroute}
         />
       )}
+
+      {/* Interactive Telemetry & Alert Sandbox Data Feeder */}
+      <SandboxFeeder 
+        trains={trains} 
+        alerts={alerts} 
+        onRefresh={() => {
+          fetchTrains();
+          fetchAlerts();
+        }} 
+      />
     </div>
   );
 }

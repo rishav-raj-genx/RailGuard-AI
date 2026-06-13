@@ -2,10 +2,95 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   ArrowLeft, Search, Train, Clock, MapPin, QrCode, Ticket, 
-  AlertOctagon, Check, Send, Sparkles, Activity, Layers, Wifi, Camera, XCircle, Minimize2, RefreshCw
+  AlertOctagon, Check, Send, Sparkles, Activity, Layers, Wifi, Camera, XCircle, Minimize2, RefreshCw,
+  Sun, CloudRain, Cloud, CloudLightning, Snowflake, Thermometer, Droplets, Umbrella
 } from 'lucide-react';
 import { Train as TrainType } from '../types';
 import { sounds } from '../utils/audio';
+
+// Dynamic microclimate helper for stations
+interface WeatherData {
+  temp: number;
+  status: 'Clear' | 'Rainy' | 'Cloudy' | 'Stormy' | 'Snowy';
+  humidity: number;
+  condition: string;
+}
+
+function getWeatherForStation(stationName: string): WeatherData {
+  if (!stationName) return { temp: 22, status: 'Clear', humidity: 45, condition: 'Clear Sky' };
+  
+  // Deterministic seed generation based on name
+  let hash = 0;
+  for (let i = 0; i < stationName.length; i++) {
+    hash = stationName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  hash = Math.abs(hash);
+  
+  const statuses: ('Clear' | 'Rainy' | 'Cloudy' | 'Stormy' | 'Snowy')[] = ['Clear', 'Rainy', 'Cloudy', 'Stormy', 'Clear'];
+  const status = statuses[hash % statuses.length];
+  
+  let baseTemp = 19;
+  const lowerStation = stationName.toLowerCase();
+  if (
+    lowerStation.includes('delhi') || 
+    lowerStation.includes('mumbai') || 
+    lowerStation.includes('varanasi') || 
+    lowerStation.includes('surat') || 
+    lowerStation.includes('ratlam') || 
+    lowerStation.includes('trichy') || 
+    lowerStation.includes('bhopal') || 
+    lowerStation.includes('pune') || 
+    lowerStation.includes('kanpur') ||
+    lowerStation.includes('prayagraj') ||
+    lowerStation.includes('india') || 
+    lowerStation.includes('chennai') || 
+    lowerStation.includes('howrah') ||
+    lowerStation.includes('dhanbad') ||
+    lowerStation.includes('gaya') ||
+    lowerStation.includes('asansol') ||
+    lowerStation.includes('nagpur') ||
+    lowerStation.includes('bhusaval')
+  ) {
+    baseTemp = 31;
+  } else if (
+    lowerStation.includes('london') || 
+    lowerStation.includes('calais') || 
+    lowerStation.includes('paris') || 
+    lowerStation.includes('lonavala') || // hill station
+    lowerStation.includes('shinkansen')
+  ) {
+    baseTemp = 15;
+  }
+  
+  const tempOffset = (hash % 10) - 5; // -5 to +4
+  const temp = baseTemp + tempOffset;
+  const humidity = 40 + (hash % 45);
+  
+  let condition = 'Clear Sky';
+  if (status === 'Rainy') condition = 'Light Showers';
+  if (status === 'Cloudy') condition = 'Scattered Clouds';
+  if (status === 'Stormy') condition = 'Thunderstorms';
+  if (status === 'Snowy') condition = 'Moderate Snow';
+  
+  return { temp, status, humidity, condition };
+}
+
+function renderWeatherIcon(status: 'Clear' | 'Rainy' | 'Cloudy' | 'Stormy' | 'Snowy') {
+  switch (status) {
+    case 'Clear':
+      return <Sun className="w-5 h-5 text-amber-400" />;
+    case 'Rainy':
+      return <CloudRain className="w-5 h-5 text-sky-400" />;
+    case 'Cloudy':
+      return <Cloud className="w-5 h-5 text-zinc-300" />;
+    case 'Stormy':
+      return <CloudLightning className="w-5 h-5 text-indigo-400 animate-pulse" />;
+    case 'Snowy':
+      return <Snowflake className="w-5 h-5 text-teal-200" />;
+    default:
+      return <Sun className="w-5 h-5 text-amber-400" />;
+  }
+}
 
 interface PassengerAppProps {
   trains: TrainType[];
@@ -34,13 +119,38 @@ export default function PassengerApp({ trains, onBack }: PassengerAppProps) {
   const [reservedSeat, setReservedSeat] = useState<{ car: number; seat: string } | null>(null);
 
   const selectedTrain = trains.find(t => t.id === selectedTrainId) || trains[0];
+  const currentStationWeather = getWeatherForStation(selectedTrain.currentStation);
+  const nextStopWeather = getWeatherForStation(selectedTrain.nextStop);
 
   // Filter trains for search selector
-  const filteredTrains = trains.filter(t => 
-    t.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.route.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.currentStation.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const query = searchQuery.toLowerCase().trim();
+  const filteredTrains = trains.filter(t => {
+    if (!query) return true;
+    
+    // Check keyword flags first
+    if (query === 'delayed') {
+      return t.delayMinutes > 0;
+    }
+    if (query === 'optimal' || query === 'critical' || query === 'advisory') {
+      return t.status.toLowerCase() === query;
+    }
+    if (query === 'indian' || query === 'india' || query === 'ir-') {
+      return t.id.startsWith('IR-') || t.name.toLowerCase().includes('express') || t.route.toLowerCase().includes('delhi') || t.route.toLowerCase().includes('mumbai') || t.route.toLowerCase().includes('howrah') || t.route.toLowerCase().includes('pune') || t.route.toLowerCase().includes('bhopal') || t.route.toLowerCase().includes('madurai');
+    }
+    if (query === 'high-speed' || query === 'bullet' || query === 'international') {
+      return t.id.startsWith('RG-') || t.currentSpeed >= 200;
+    }
+
+    return (
+      t.id.toLowerCase().includes(query) ||
+      t.name.toLowerCase().includes(query) ||
+      t.route.toLowerCase().includes(query) ||
+      t.currentStation.toLowerCase().includes(query) ||
+      t.origin.toLowerCase().includes(query) ||
+      t.destination.toLowerCase().includes(query) ||
+      t.sector.toLowerCase().includes(query)
+    );
+  });
 
   const triggerSOS = (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,11 +204,74 @@ export default function PassengerApp({ trains, onBack }: PassengerAppProps) {
               <Search className="w-4 h-4 text-neutral-500 absolute left-3.5 top-3.5" />
               <input 
                 type="text" 
-                placeholder="Search Train, City (e.g. Paris)..."
+                placeholder="Search Train or City (e.g. Vande Bharat, Delhi, Paris)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-neutral-950 border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono transition-colors"
               />
+            </div>
+
+            {/* Quick search suggestion chips */}
+            <div className="mt-3.5 space-y-2.5">
+              <div className="flex flex-col gap-1">
+                <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest font-semibold">Quick Filters:</span>
+                <div className="flex flex-wrap gap-1">
+                  {[
+                    { label: 'All Trains', query: '' },
+                    { label: '🇮🇳 India Spec', query: 'indian' },
+                    { label: '⚡ Fast Bullet', query: 'high-speed' },
+                    { label: '⚠️ Delayed Only', query: 'delayed' },
+                    { label: '🟢 Optimal Status', query: 'optimal' }
+                  ].map((chip) => (
+                    <button
+                      key={chip.label}
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery(chip.query);
+                        sounds.playTap();
+                      }}
+                      className={`text-[9.5px] font-mono px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
+                        searchQuery.toLowerCase() === chip.query.toLowerCase()
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 font-bold'
+                          : 'bg-neutral-950 text-neutral-400 border-neutral-850 hover:border-neutral-700 hover:text-neutral-300'
+                      }`}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest font-semibold">Popular Models:</span>
+                <div className="flex flex-wrap gap-1">
+                  {[
+                    { label: 'Vande Bharat', query: 'Vande Bharat' },
+                    { label: 'Rajdhani', query: 'Rajdhani' },
+                    { label: 'Shatabdi', query: 'Shatabdi' },
+                    { label: 'Duronto', query: 'Duronto' },
+                    { label: 'Deccan Queen', query: 'Deccan Queen' },
+                    { label: 'Shinkansen', query: 'Shinkansen' },
+                    { label: 'Eurostar', query: 'Eurostar' }
+                  ].map((chip) => (
+                    <button
+                      key={chip.label}
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery(chip.query);
+                        sounds.playTap();
+                      }}
+                      className={`text-[9.5px] font-mono px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
+                        searchQuery.toLowerCase() === chip.query.toLowerCase()
+                          ? 'bg-amber-400/20 text-amber-300 border-amber-400/40 font-bold'
+                          : 'bg-neutral-950 text-neutral-400 border-neutral-850 hover:border-neutral-700 hover:text-neutral-300'
+                      }`}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* List results */}
@@ -121,7 +294,12 @@ export default function PassengerApp({ trains, onBack }: PassengerAppProps) {
                       <Train className="w-4.5 h-4.5" />
                     </div>
                     <div>
-                      <span className="text-xs font-bold block">{train.id}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold block">{train.id}</span>
+                        <span className="text-[10px] font-mono text-emerald-400 font-semibold truncate max-w-[150px]">
+                          {train.name.replace(/\[.*\]/, '').trim()}
+                        </span>
+                      </div>
                       <span className="text-[10px] text-neutral-400 font-mono block">{train.route}</span>
                     </div>
                   </div>
@@ -483,6 +661,98 @@ export default function PassengerApp({ trains, onBack }: PassengerAppProps) {
                 </span>
               </div>
 
+            </div>
+
+            {/* Microclimate Terminal & Checkpoint Forecast Widgets */}
+            <div id="weather-forecast-card" className="mt-6 bg-neutral-950 p-5 rounded-3xl border border-neutral-800">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-1.5 font-mono uppercase">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Terminal & Stop Microclimate Forecasts
+                  </h3>
+                  <p className="text-[10px] text-neutral-400 font-mono mt-0.5">Real-time weather modeling at departing platforms, transit checkpoints, and destinations.</p>
+                </div>
+                <span className="text-[9px] font-mono bg-neutral-900 px-2 py-0.5 rounded text-neutral-400 border border-neutral-800 uppercase tracking-wider font-semibold">
+                  Sat-Link Sync Good
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Current Station Weather Card */}
+                <div className="bg-neutral-900/40 p-4 rounded-2xl border border-neutral-850 relative overflow-hidden group hover:border-neutral-700 transition-colors">
+                  <div className="absolute top-3 right-3 flex items-center gap-1 bg-neutral-950/85 px-2 py-0.5 rounded-full border border-neutral-800 text-[8.5px] font-mono text-zinc-400 font-bold uppercase tracking-widest">
+                    <span className="w-1 h-1 rounded-full bg-blue-400"></span>
+                    Current Station
+                  </div>
+
+                  <span className="text-[9px] font-mono text-neutral-500 uppercase block tracking-wider font-bold">BOARDING ZONE WEATHER</span>
+                  <span className="text-sm font-bold text-white block mt-1.5 truncate pr-24">{selectedTrain.currentStation || "Active Hub"}</span>
+                  
+                  <div className="mt-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 bg-neutral-950 rounded-xl border border-neutral-800 flex items-center justify-center">
+                        {renderWeatherIcon(currentStationWeather.status)}
+                      </div>
+                      <div>
+                        <span className="text-2xl font-black text-white leading-none block">{currentStationWeather.temp}°C</span>
+                        <span className="text-[10px] text-neutral-400 font-mono block mt-0.5">{currentStationWeather.condition}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="text-right font-mono text-[9.5px] text-neutral-400 space-y-1">
+                      <div className="flex items-center justify-end gap-1">
+                        <Droplets className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>RH: {currentStationWeather.humidity}%</span>
+                      </div>
+                      <div className="text-[8.5px] text-emerald-400 font-semibold bg-emerald-950/40 border border-emerald-900/50 px-1.5 py-0.5 rounded inline-block">
+                        {currentStationWeather.status === 'Rainy' || currentStationWeather.status === 'Stormy' ? 'RAIN ACTIVE' : 'NOMINAL CORRIDOR'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Next Stop Weather Card */}
+                <div className="bg-neutral-900/40 p-4 rounded-2xl border border-neutral-850 relative overflow-hidden group hover:border-neutral-700 transition-colors">
+                  <div className="absolute top-3 right-3 flex items-center gap-1 bg-neutral-950/85 px-2 py-0.5 rounded-full border border-neutral-800 text-[8.5px] font-mono text-amber-400 font-bold uppercase tracking-widest">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Next Stop
+                  </div>
+
+                  <span className="text-[9px] font-mono text-neutral-500 uppercase block tracking-wider font-bold font-mono">DESTINATION ARRIVAL OUTLOOK</span>
+                  <span className="text-sm font-bold text-white block mt-1.5 truncate pr-20">{selectedTrain.nextStop || "Next Junction"}</span>
+                  
+                  <div className="mt-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 bg-neutral-950 rounded-xl border border-neutral-800 flex items-center justify-center">
+                        {renderWeatherIcon(nextStopWeather.status)}
+                      </div>
+                      <div>
+                        <span className="text-2xl font-black text-white leading-none block">{nextStopWeather.temp}°C</span>
+                        <span className="text-[10px] text-neutral-400 font-mono block mt-0.5">{nextStopWeather.condition}</span>
+                      </div>
+                    </div>
+
+                    <div className="text-right font-mono text-[9.5px] text-neutral-400 space-y-1">
+                      <div className="flex items-center justify-end gap-1">
+                        <Droplets className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>RH: {nextStopWeather.humidity}%</span>
+                      </div>
+                      
+                      {nextStopWeather.status === 'Rainy' || nextStopWeather.status === 'Stormy' ? (
+                        <div className="flex items-center gap-1 text-amber-300 font-bold bg-amber-950/50 border border-amber-900/50 px-1.5 py-0.5 rounded animate-pulse">
+                          <Umbrella className="w-3 h-3 text-amber-300" />
+                          <span>Pack Umbrella</span>
+                        </div>
+                      ) : (
+                        <div className="text-[8.5px] text-emerald-400 font-semibold bg-emerald-950/40 border border-emerald-900/50 px-1.5 py-0.5 rounded inline-block">
+                          CLEAR SKY OUTLOOK
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Custom Interactive Crowd Level Per Carriage Monitor */}
