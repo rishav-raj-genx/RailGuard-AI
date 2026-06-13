@@ -71,6 +71,85 @@ The system performance parameters scale up to enterprise specifications:
 
 ---
 
+## 🔧 Installation & Local Setup
+
+Get RailGuard AI running on your local machine in under 5 minutes by following these steps.
+
+### 📋 Prerequisites
+
+Before you begin, ensure you have the following installed:
+*   **Node.js** (v18.0.0 or higher recommended)
+*   **npm** (bundled with Node.js) or another package manager (e.g., Yarn, pnpm)
+*   *(Optional)* **Google Gemini API Key** (Get one from [Google AI Studio](https://aistudio.google.com/)). If not provided, the platform automatically boots with a realistic mock diagnostic agent so you can test all UI workflows immediately.
+
+---
+
+### 🚀 Step-by-Step Installation
+
+1.  **Clone the Repository**
+    ```bash
+    git clone https://github.com/YOUR_GITHUB_USERNAME/RailGuard_AI.git
+    cd RailGuard_AI
+    ```
+
+2.  **Install Dependencies**
+    ```bash
+    npm install
+    ```
+
+3.  **Configure Environment Variables**
+    Copy the sample environment file to create your own active config:
+    ```bash
+    cp .env.example .env
+    ```
+    Open the newly created `.env` file and configure your credentials:
+    ```env
+    # Add your Google Gemini API Key here (or leave blank to use fallback mock mode)
+    GEMINI_API_KEY="your_actual_gemini_api_key_here"
+
+    # App URL for local development (used for relative routing)
+    APP_URL="http://localhost:3000"
+    ```
+
+---
+
+### 💻 Running the Application
+
+You can spin up RailGuard AI in either **Development Mode** (with hot-module reloading for frontend code changes) or **Production Mode** (optimized bundle).
+
+#### Option A: Development Mode (Recommended for testing/evaluating)
+This runs the Express backend server and connects Vite's HMR middleware for the frontend in a single consolidated process.
+```bash
+npm run dev
+```
+Once started, open your browser and navigate to:
+👉 **[http://localhost:3000](http://localhost:3000)**
+
+#### Option B: Production Mode (Recommended for hackathon submissions & benchmarks)
+Compile the React frontend assets and bundle the TypeScript Express server using esbuild, then run the production build:
+```bash
+# Clean previous builds and compile the codebase
+npm run build
+
+# Start the compiled server
+npm run start
+```
+The application will serve the optimized production bundle at **[http://localhost:3000](http://localhost:3000)**.
+
+---
+
+### 🎯 Verification & Testing Checklist
+
+To verify the setup, you can try these core user flows:
+1.  **Operator Control Center (OCC):** Click the terminal input on the right side of the dashboard, type `help`, or trigger simulated overrides.
+2.  **Emergency Halts:** Try the "Global Emergency Halt" button to watch all trains transition to a critical halted state instantly.
+3.  **AI Staff Chat:** Ask the chat assistant (bottom panel) questions like *"Show me all delayed trains"* or *"What is the risk level of RG-401?"*
+    > [!NOTE]
+    > If you did not supply a `GEMINI_API_KEY`, the chat will run in a structured fallback mode responding with localized mock railway data, ensuring the app remains fully interactive.
+4.  **Reset State:** Press the "Reset Live Data" button in the upper-right corner to revert the entire railway network back to its default startup seed.
+
+---
+
 ## 📋 Competition Alignment & Compliance
 *   **Rule 1 (Team Capacity):** Structured specifically for small, focused teams of 1–5 members, prioritizing component isolation.
 *   **Rule 2 (Building Philosophy):** Uses Vite and highly responsive styling structures to avoid excessive boilerplate and build a meaningful, ready-to-ship product.
